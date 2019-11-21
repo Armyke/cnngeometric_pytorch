@@ -22,7 +22,7 @@ from geotnf.transformation import CoupledPairTnf
 from image.normalization import NormalizeImageDict
 
 from util.train_test_fn import train, validate_model
-from util.torch_util import save_checkpoint, str_to_bool
+from util.torch_util import save_checkpoint, str_to_bool, load_torch_model
 
 """
 
@@ -83,12 +83,16 @@ def parse_flags():
                         help='sample random transformations')
     parser.add_argument('--coupled_dataset', type=str_to_bool, nargs='?', const=True, default=False,
                         help='Whether csv dataset contains already pair of images')
-    # log parameters
+    # Log parameters
     parser.add_argument('--log_interval', type=int, default=100,
                         help='Number of iterations between logs')
     parser.add_argument('--log_dir', type=str, default='',
                         help='If unspecified log_dir will be set to'
                              '<trained_models_dir>/<trained_models_fn>/')
+    # In case of fine tuning is possible to load a previous trained model
+    # by specifying his checkpoint path
+    parser.add_argument('--pretrained', type=str, default='',
+                        help='Path to the .pth.tar checkpoint file')
 
     return parser.parse_args()
 
@@ -123,9 +127,12 @@ def main():
     # CNN model and loss
     print('Creating CNN model...')
 
-    model = CNNGeometric(use_cuda=use_cuda,
-                         geometric_model=args.geometric_model,
-                         feature_extraction_cnn=args.feature_extraction_cnn)
+    if not args.pretrained:
+        model = CNNGeometric(use_cuda=use_cuda,
+                             geometric_model=args.geometric_model,
+                             feature_extraction_cnn=args.feature_extraction_cnn)
+    else:
+        model = load_torch_model(args, use_cuda)
 
     if args.use_mse_loss:
         print('Using MSE loss...')

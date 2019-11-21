@@ -1,9 +1,13 @@
 import shutil
+from collections import OrderedDict
+
 import torch
 import argparse
 from torch.autograd import Variable
 from os import makedirs
 from os.path import exists, join, basename, dirname
+
+from model.cnn_geometric_model import CNNGeometric
 
 
 class BatchTensorToVars(object):
@@ -41,3 +45,16 @@ def str_to_bool(v):
         return False
     else:
         raise argparse.ArgumentTypeError('Boolean value expected.')
+
+
+def load_torch_model(args, use_cuda):
+    model = CNNGeometric(use_cuda=use_cuda, geometric_model='affine',
+                         feature_extraction_cnn=args.feature_extraction_cnn)
+
+    # Load trained weights
+    print('Loading trained model weights...')
+    checkpoint = torch.load(args.pretrained, map_location=lambda storage, loc: storage)
+    checkpoint['state_dict'] = OrderedDict(
+        [(k.replace('vgg', 'model'), v) for k, v in checkpoint['state_dict'].items()])
+    model.load_state_dict(checkpoint['state_dict'])
+    return model
