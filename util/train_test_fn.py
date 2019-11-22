@@ -58,7 +58,8 @@ def train(epoch, model, loss_fn, optimizer,
                 tb_writer.add_scalar('training loss',
                                      loss.data.item(),
                                      (epoch - 1) * len(dataloader) + batch_idx)
-                log_images(tb_writer, batch, batch_idx)
+                log_images(tb_writer, batch, batch_idx, 'Model Output')
+                log_images(tb_writer, tnf_batch, batch_idx, 'Ground Truth')
 
     train_loss /= len(dataloader)
     print('Train set: Average loss: {:.4f}'.format(train_loss))
@@ -96,13 +97,15 @@ def validate_model(model, loss_fn,
     return val_loss
 
 
-def log_images(tb_writer, batch, counter):
+def log_images(tb_writer, batch, counter, tag=None):
     """
     Fn to log image batches
 
     :param tb_writer: Summary Writer
     :param batch: Batch of samples
     :param counter: Epoch index
+    :param tag: Default None, if a string is specified tags the log
+    with it as a prefix
     :return: None
     """
 
@@ -132,7 +135,14 @@ def log_images(tb_writer, batch, counter):
                           denorm_img_b,
                           a_warp_on_b.unsqueeze(0)])
 
-        tb_writer.add_images('sample_A/sample_B/Warp',
+        if not tag:
+            log_name = 'sample_A/sample_B/Warp'
+        elif isinstance(tag, str):
+            log_name = '{}    sample_A/sample_B/Warp'.format(tag)
+        else:
+            raise ValueError("Unexpected type for 'tag', must be of type string.")
+
+        tb_writer.add_images(log_name,
                              make_grid(out_images).unsqueeze(0),
                              counter)
 
