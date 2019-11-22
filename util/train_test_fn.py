@@ -124,7 +124,9 @@ def log_images(tb_writer, batch, counter, tag=None):
 
         # convert to gray-scale the reshaped image in the correct order:
         # (height, width, n_channels)
-        gray_img_a = cv2.cvtColor(denorm_img_a.squeeze(0).permute(1, 2, 0).numpy(),
+        gray_img_a = cv2.cvtColor(denorm_img_a.squeeze(0).permute(1,
+                                                                  2,
+                                                                  0).cpu().numpy(),
                                   cv2.COLOR_BGR2GRAY)
 
         # we have to warp the normalized points and then denormalize the image
