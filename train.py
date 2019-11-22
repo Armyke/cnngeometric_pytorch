@@ -259,7 +259,8 @@ def main():
 
         val_loss = validate_model(model, loss,
                                   dataloader_val, pair_generation_tnf,
-                                  epoch, logs_writer)
+                                  epoch, logs_writer,
+                                  coupled=args.coupled_dataset)
 
         # remember best loss
         is_best = val_loss < best_val_loss
