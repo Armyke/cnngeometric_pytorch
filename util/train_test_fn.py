@@ -107,6 +107,7 @@ def log_images(tb_writer, batch, tnf_matrices, counter, tag=None):
 
     :param tb_writer: Summary Writer
     :param batch: Batch of samples
+    :param tnf_matrices: Batch of transformations to apply
     :param counter: Epoch index
     :param tag: Default None, if a string is specified tags the log
     with it as a prefix
@@ -124,7 +125,7 @@ def log_images(tb_writer, batch, tnf_matrices, counter, tag=None):
                                        forward=False)
         denorm_img_b = normalize_image(img_b.unsqueeze(0),
                                        forward=False)
-        transform = aff_matrix.cpu().numpy()
+        transform = aff_matrix.cpu().detach().reshape([2, 3]).numpy()
 
         # convert to gray-scale the reshaped image in the correct order:
         # (height, width, n_channels)
