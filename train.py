@@ -53,14 +53,16 @@ def parse_flags():
     parser.add_argument('--trained_models_fn', type=str, default='checkpoint_adam',
                         help='trained model filename')
     # Optimization parameters
-    parser.add_argument('--lr', type=float, default=0.001,
-                        help='learning rate')
+    parser.add_argument('--lr', type=float, default=0.01,
+                        help='learning rate. (Starting lr when using scheduler)')
     parser.add_argument('--lr_scheduler', type=str_to_bool,
                         nargs='?', const=True, default=True,
                         help='Bool (default True), whether to use a decaying lr_scheduler')
     parser.add_argument('--lr_max_iter', type=int, default=1000,
-                        help='Number of steps between lr starting value and 1e-6 '
-                             '(lr default min) when choosing lr_scheduler')
+                        help='Number of steps between lr starting value and'
+                             ' lr_min (default=1e-5) when choosing lr_scheduler')
+    parser.add_argument('--lr_min', type=float, default=1e-5,
+                        help='Minimum learning rate when using scheduler')
     parser.add_argument('--momentum', type=float, default=0.9,
                         help='momentum constant')
     parser.add_argument('--num_epochs', type=int, default=10,
@@ -206,7 +208,7 @@ def main():
     if args.lr_scheduler:
         scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer,
                                                                T_max=args.lr_max_iter,
-                                                               eta_min=1e-6)
+                                                               eta_min=args.lr_min)
         # scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, 'min')
     else:
         scheduler = False
