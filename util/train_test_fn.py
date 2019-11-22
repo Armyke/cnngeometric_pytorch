@@ -58,8 +58,12 @@ def train(epoch, model, loss_fn, optimizer,
                 tb_writer.add_scalar('training loss',
                                      loss.data.item(),
                                      (epoch - 1) * len(dataloader) + batch_idx)
-                log_images(tb_writer, batch, batch_idx, 'Model Output')
-                log_images(tb_writer, tnf_batch, batch_idx, 'Ground Truth')
+                log_images(tb_writer,
+                           batch, theta,
+                           batch_idx, 'Model Output')
+                log_images(tb_writer,
+                           tnf_batch, tnf_batch['theta_GT'],
+                           batch_idx, 'Ground Truth')
 
     train_loss /= len(dataloader)
     print('Train set: Average loss: {:.4f}'.format(train_loss))
@@ -85,7 +89,7 @@ def validate_model(model, loss_fn,
 
         # if possible log on TB an image_a, image_b couple with the relative predicted transform
         if coupled and tb_writer and batch_idx == 0:
-            log_images(tb_writer, batch, epoch)
+            log_images(tb_writer, batch, theta, epoch)
 
     val_loss /= len(dataloader)
     print('Validation set: Average loss: {:.4f}'.format(val_loss))
@@ -97,7 +101,7 @@ def validate_model(model, loss_fn,
     return val_loss
 
 
-def log_images(tb_writer, batch, counter, tag=None):
+def log_images(tb_writer, batch, tnf_matrices, counter, tag=None):
     """
     Fn to log image batches
 
@@ -110,9 +114,9 @@ def log_images(tb_writer, batch, counter, tag=None):
     """
 
     try:
-        images = zip(batch['image_a'], batch['image_b'], batch['theta'])
+        images = zip(batch['image_a'], batch['image_b'], tnf_matrices)
     except KeyError:
-        images = zip(batch['source_image'], batch['target_image'], batch['theta_GT'])
+        images = zip(batch['source_image'], batch['target_image'], tnf_matrices)
 
     for img_a, img_b, aff_matrix in images:
 
