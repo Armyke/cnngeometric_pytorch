@@ -120,7 +120,7 @@ def log_images(tb_writer, batch, counter, tag=None):
                                        forward=False)
         denorm_img_b = normalize_image(img_b.unsqueeze(0),
                                        forward=False)
-        transform = aff_matrix.numpy()
+        transform = aff_matrix.cpu().numpy()
 
         # convert to gray-scale the reshaped image in the correct order:
         # (height, width, n_channels)
