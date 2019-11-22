@@ -1,6 +1,5 @@
 from __future__ import print_function, division
 import cv2
-import numpy as np
 from tqdm import tqdm
 from torch import Tensor
 
@@ -34,7 +33,7 @@ def train(epoch, model, loss_fn, optimizer,
         theta = model(tnf_batch)
 
         if loss_fn._get_name() == 'MSELoss':
-            loss = loss_fn(theta, np.reshape(tnf_batch['theta_GT'], [16, 6]))
+            loss = loss_fn(theta, tnf_batch['theta_GT'].reshape([16, 6]))
         else:
             loss = loss_fn(theta, tnf_batch['theta_GT'])
 
@@ -74,7 +73,7 @@ def validate_model(model, loss_fn,
         theta = model(tnf_batch)
 
         if loss_fn._get_name() == 'MSELoss':
-            loss = loss_fn(theta, np.reshape(tnf_batch['theta_GT'], [16, 6]))
+            loss = loss_fn(theta, tnf_batch['theta_GT'].reshape([16, 6]))
         else:
             loss = loss_fn(theta, tnf_batch['theta_GT'])
 
@@ -114,11 +113,9 @@ def log_images(tb_writer, batch, epoch):
                                    forward=False)
     transform = batch['theta'][0].numpy()
 
-    # TODO use already prepared methods to warp in geotnf.point_tnf
     # convert to gray-scale the reshaped image in the correct order:
     # (height, width, n_channels)
-    gray_img_a = cv2.cvtColor(np.array((denorm_img_a * 255).squeeze(0).permute(1, 2, 0),
-                                       dtype=np.uint8),
+    gray_img_a = cv2.cvtColor(denorm_img_a.squeeze(0).permute(1, 2, 0).numpy(),
                               cv2.COLOR_BGR2GRAY)
 
     # TODO matrix is normalized so in order to have the correct warp:
@@ -138,7 +135,7 @@ def log_images(tb_writer, batch, epoch):
     tb_writer.add_images('image B', denorm_img_b,
                          epoch)
 
-    tb_writer.add_images('A warped on B', a_warp_on_b.unsqueeze(0) / 255,
+    tb_writer.add_images('A warped on B', a_warp_on_b.unsqueeze(0),
                          epoch)
 
     return
