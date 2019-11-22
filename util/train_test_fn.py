@@ -136,21 +136,27 @@ def log_images(tb_writer, batch, counter, tag=None):
                                           transform,
                                           (cols, rows))
         a_warp_on_b = Tensor(cv2.cvtColor(gray_a_warp_on_b,
-                                          cv2.COLOR_GRAY2BGR)).permute(2, 0, 1)
+                                          cv2.COLOR_GRAY2BGR)).permute(2,
+                                                                       0,
+                                                                       1).unsqueeze(0)
 
-        out_images = cat([denorm_img_a,
-                          denorm_img_b,
-                          a_warp_on_b.unsqueeze(0)])
+        couple_imgs = cat([denorm_img_a,
+                           denorm_img_b])
 
         if not tag:
-            log_name = 'sample_A/sample_B/Warp'
+            log_name = 'sample_A/sample_B'
+            warp_name = 'A warp on B'
         elif isinstance(tag, str):
-            log_name = '{}    sample_A/sample_B/Warp'.format(tag)
+            log_name = '{}\tsample_A/sample_B'.format(tag)
+            warp_name = '{}\tA warp on B'.format(tag)
         else:
             raise ValueError("Unexpected type for 'tag', must be of type string.")
 
         tb_writer.add_images(log_name,
-                             make_grid(out_images).unsqueeze(0),
+                             make_grid(couple_imgs).unsqueeze(0),
+                             counter)
+        tb_writer.add_images(warp_name,
+                             a_warp_on_b,
                              counter)
 
     return
