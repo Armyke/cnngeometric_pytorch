@@ -1,9 +1,11 @@
 from __future__ import print_function, division
 import cv2
 from tqdm import tqdm
-from torch import Tensor
+from torch import Tensor, cat
 
 from image.normalization import normalize_image
+
+from torchvision.utils import make_grid
 
 
 def train(epoch, model, loss_fn, optimizer,
@@ -56,6 +58,7 @@ def train(epoch, model, loss_fn, optimizer,
                 tb_writer.add_scalar('training loss',
                                      loss.data.item(),
                                      (epoch - 1) * len(dataloader) + batch_idx)
+                log_images(tb_writer, batch, batch_idx)
 
     train_loss /= len(dataloader)
     print('Train set: Average loss: {:.4f}'.format(train_loss))
@@ -80,7 +83,7 @@ def validate_model(model, loss_fn,
         val_loss += loss.data.cpu().numpy().item()
 
         # if possible log on TB an image_a, image_b couple with the relative predicted transform
-        if coupled and tb_writer:
+        if coupled and tb_writer and batch_idx == 0:
             log_images(tb_writer, batch, epoch)
 
     val_loss /= len(dataloader)
@@ -93,49 +96,44 @@ def validate_model(model, loss_fn,
     return val_loss
 
 
-def log_images(tb_writer, batch, epoch):
+def log_images(tb_writer, batch, counter):
     """
     Fn to log image batches
 
     :param tb_writer: Summary Writer
     :param batch: Batch of samples
-    :param epoch: Epoch index
+    :param counter: Epoch index
     :return: None
     """
 
-    # load the image
-    img_a = batch['image_a'][0]
-    img_b = batch['image_b'][0]
+    for img_a, img_b in zip(batch['image_a'], batch['image_b']):
 
-    denorm_img_a = normalize_image(img_a.unsqueeze(0),
-                                   forward=False)
-    denorm_img_b = normalize_image(img_b.unsqueeze(0),
-                                   forward=False)
-    transform = batch['theta'][0].numpy()
+        denorm_img_a = normalize_image(img_a.unsqueeze(0),
+                                       forward=False)
+        denorm_img_b = normalize_image(img_b.unsqueeze(0),
+                                       forward=False)
+        transform = batch['theta'][0].numpy()
 
-    # convert to gray-scale the reshaped image in the correct order:
-    # (height, width, n_channels)
-    gray_img_a = cv2.cvtColor(denorm_img_a.squeeze(0).permute(1, 2, 0).numpy(),
-                              cv2.COLOR_BGR2GRAY)
+        # convert to gray-scale the reshaped image in the correct order:
+        # (height, width, n_channels)
+        gray_img_a = cv2.cvtColor(denorm_img_a.squeeze(0).permute(1, 2, 0).numpy(),
+                                  cv2.COLOR_BGR2GRAY)
 
-    # TODO matrix is normalized so in order to have the correct warp:
-    # we have to warp the normalized points and then denormalize the image
-    # apply predicted affine transformation
-    rows, cols = denorm_img_a.squeeze(0).shape[1:]
-    gray_a_warp_on_b = cv2.warpAffine(gray_img_a,
-                                      transform,
-                                      (cols, rows))
-    a_warp_on_b = Tensor(cv2.cvtColor(gray_a_warp_on_b,
-                                      cv2.COLOR_GRAY2BGR)).permute(2, 0, 1)
+        # we have to warp the normalized points and then denormalize the image
+        # apply predicted affine transformation
+        rows, cols = denorm_img_a.squeeze(0).shape[1:]
+        gray_a_warp_on_b = cv2.warpAffine(gray_img_a,
+                                          transform,
+                                          (cols, rows))
+        a_warp_on_b = Tensor(cv2.cvtColor(gray_a_warp_on_b,
+                                          cv2.COLOR_GRAY2BGR)).permute(2, 0, 1)
 
-    # log the three images with the tb_writer
-    tb_writer.add_images('image A', denorm_img_a,
-                         epoch)
+        out_images = cat([denorm_img_a,
+                          denorm_img_b,
+                          a_warp_on_b.unsqueeze(0)])
 
-    tb_writer.add_images('image B', denorm_img_b,
-                         epoch)
-
-    tb_writer.add_images('A warped on B', a_warp_on_b.unsqueeze(0),
-                         epoch)
+        tb_writer.add_images('sample_A/sample_B/Warp',
+                             make_grid(out_images).unsqueeze(0),
+                             counter)
 
     return

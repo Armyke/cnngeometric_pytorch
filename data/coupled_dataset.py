@@ -19,7 +19,12 @@ class CoupledDataset(Dataset):
     Args:
             csv_file (string): Path to the csv file with image names and transformations.
             training_image_path (string): Directory with all the images.
-            transform (callable): Transformation for post-processing the training pair (eg. image normalization)
+            transform (callable): Transformation for post-processing the training pair
+            (eg. image normalization)
+            mode (string): Default None, other possible value is 'test',
+            if mode == 'test' template argument must be valued as well
+            template (string): Default None, path to a specific template over which
+            warp images
 
     Returns:
             Dict: {
@@ -32,18 +37,18 @@ class CoupledDataset(Dataset):
 
     def __init__(self, csv_file, training_image_path, output_size=(480, 640),
                  geometric_model='affine', transform=None,
-                 random_sample=False, random_t=0.5, random_s=0.5,
-                 random_alpha=1/6, random_t_tps=0.4):
-
-        self.random_sample = random_sample
-        self.random_t = random_t
-        self.random_t_tps = random_t_tps
-        self.random_alpha = random_alpha
-        self.random_s = random_s
+                 mode=None, template=None):
         self.out_h, self.out_w = output_size
         # read csv file
         self.train_data = pd.read_csv(csv_file)
-        self.img_a_names = self.train_data.iloc[:, 0]
+
+        if mode == 'test':
+            assert(isinstance(template, str))
+            self.img_a_names = pd.Series([template] * len(self.train_data.iloc[:, 0]))
+
+        else:
+            self.img_a_names = self.train_data.iloc[:, 0]
+
         self.img_b_names = self.train_data.iloc[:, 1]
         self.img_a_vertices = self.train_data.iloc[:, 2]
         self.theta_array = self.train_data.iloc[:, 3:].values.astype('float')
@@ -52,48 +57,37 @@ class CoupledDataset(Dataset):
         self.transform = transform
         self.geometric_model = geometric_model
         self.affineTnf = GeometricTnf(out_h=self.out_h, out_w=self.out_w, use_cuda=False)
+        self.template = template
 
     def __len__(self):
         return len(self.train_data)
 
     def __getitem__(self, idx):
+
         # read image
-        img_name_a = os.path.join(self.training_image_path, self.img_a_names[idx])
+        if not self.template:
+            img_name_a = os.path.join(self.training_image_path, self.img_a_names[idx])
+        else:
+            img_name_a = self.template
+
         img_name_b = os.path.join(self.training_image_path, self.img_b_names[idx])
-        image_a = cv2.imread(img_name_a, cv2.IMREAD_COLOR)  # io.imread(img_name_a)
-        image_b = cv2.imread(img_name_b, cv2.IMREAD_COLOR)  # io.imread(img_name_b)
+
+        image_a = cv2.imread(img_name_a, cv2.IMREAD_COLOR)
+        image_b = cv2.imread(img_name_b, cv2.IMREAD_COLOR)
         vertices = ast.literal_eval(self.img_a_vertices[idx])
 
         # read theta
-        if not self.random_sample:
-            theta = self.theta_array[idx, :]
+        theta = self.theta_array[idx, :]
 
-            if self.geometric_model == 'affine':
+        if self.geometric_model == 'affine':
 
-                # reshape theta to 2x3 matrix [A|t] where
-                # first row corresponds to X and second to Y
-                theta = theta[[3, 2, 5, 1, 0, 4]].reshape(2, 3)
+            # reshape theta to 2x3 matrix [A|t] where
+            # first row corresponds to X and second to Y
+            theta = theta[[3, 2, 5, 1, 0, 4]].reshape(2, 3)
 
-            elif self.geometric_model == 'tps':
+        elif self.geometric_model == 'tps':
 
-                theta = np.expand_dims(np.expand_dims(theta, 1), 2)
-        else:
-
-            if self.geometric_model == 'affine':
-                alpha = (np.random.rand(1) - 0.5) * 2 * np.pi * self.random_alpha
-                theta = np.random.rand(6)
-                theta[[2, 5]] = (theta[[2, 5]] - 0.5) * 2 * self.random_t
-                theta[0] = (1 + (theta[0] - 0.5) * 2 * self.random_s) * np.cos(alpha)
-                theta[1] = (1 + (theta[1] - 0.5) * 2 * self.random_s) * (-np.sin(alpha))
-                theta[3] = (1 + (theta[3] - 0.5) * 2 * self.random_s) * np.sin(alpha)
-                theta[4] = (1 + (theta[4] - 0.5) * 2 * self.random_s) * np.cos(alpha)
-                theta = theta.reshape(2, 3)
-
-            if self.geometric_model == 'tps':
-                theta = np.array([-1, -1, -1, 0, 0, 0, 1, 1, 1,
-                                  -1, 0, 1, -1, 0, 1, -1, 0, 1])
-
-                theta = theta + (np.random.rand(18) - 0.5) * 2 * self.random_t_tps
+            theta = np.expand_dims(np.expand_dims(theta, 1), 2)
 
         # hold in the image_a only the crop but maintaining resolution
         # we achieve this by blanking each pixel outside the vertices
