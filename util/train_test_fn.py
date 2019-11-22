@@ -109,13 +109,18 @@ def log_images(tb_writer, batch, counter, tag=None):
     :return: None
     """
 
-    for img_a, img_b in zip(batch['image_a'], batch['image_b']):
+    try:
+        images = zip(batch['image_a'], batch['image_b'], batch['theta'])
+    except KeyError:
+        images = zip(batch['source_image'], batch['target_image'], batch['theta_GT'])
+
+    for img_a, img_b, aff_matrix in images:
 
         denorm_img_a = normalize_image(img_a.unsqueeze(0),
                                        forward=False)
         denorm_img_b = normalize_image(img_b.unsqueeze(0),
                                        forward=False)
-        transform = batch['theta'][0].numpy()
+        transform = aff_matrix.numpy()
 
         # convert to gray-scale the reshaped image in the correct order:
         # (height, width, n_channels)
