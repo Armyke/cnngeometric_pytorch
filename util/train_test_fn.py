@@ -101,7 +101,7 @@ def validate_model(model, loss_fn,
     return val_loss
 
 
-def log_images(tb_writer, batch, tnf_matrices, counter, tag=None):
+def log_images(tb_writer, batch, tnf_matrices, counter, n_max=1, tag=None):
     """
     Fn to log image batches
 
@@ -119,49 +119,53 @@ def log_images(tb_writer, batch, tnf_matrices, counter, tag=None):
     except KeyError:
         images = zip(batch['source_image'], batch['target_image'], tnf_matrices)
 
-    for img_a, img_b, aff_matrix in images:
+    for idx, (img_a, img_b, aff_matrix) in enumerate(images):
+        if idx < n_max:
 
-        denorm_img_a = normalize_image(img_a.unsqueeze(0),
-                                       forward=False)
-        denorm_img_b = normalize_image(img_b.unsqueeze(0),
-                                       forward=False)
-        transform = aff_matrix.cpu().detach().reshape([2, 3]).numpy()
+            denorm_img_a = normalize_image(img_a.unsqueeze(0),
+                                           forward=False)
+            denorm_img_b = normalize_image(img_b.unsqueeze(0),
+                                           forward=False)
+            transform = aff_matrix.cpu().detach().reshape([2, 3]).numpy()
 
-        # convert to gray-scale the reshaped image in the correct order:
-        # (height, width, n_channels)
-        gray_img_a = cv2.cvtColor(denorm_img_a.squeeze(0).permute(1,
-                                                                  2,
-                                                                  0).cpu().numpy(),
-                                  cv2.COLOR_BGR2GRAY)
+            # convert to gray-scale the reshaped image in the correct order:
+            # (height, width, n_channels)
+            gray_img_a = cv2.cvtColor(denorm_img_a.squeeze(0).permute(1,
+                                                                      2,
+                                                                      0).cpu().numpy(),
+                                      cv2.COLOR_BGR2GRAY)
 
-        # we have to warp the normalized points and then denormalize the image
-        # apply predicted affine transformation
-        rows, cols = denorm_img_a.squeeze(0).shape[1:]
-        gray_a_warp_on_b = cv2.warpAffine(gray_img_a,
-                                          transform,
-                                          (cols, rows))
-        a_warp_on_b = Tensor(cv2.cvtColor(gray_a_warp_on_b,
-                                          cv2.COLOR_GRAY2BGR)).permute(2,
-                                                                       0,
-                                                                       1).unsqueeze(0)
+            # we have to warp the normalized points and then denormalize the image
+            # apply predicted affine transformation
+            rows, cols = denorm_img_a.squeeze(0).shape[1:]
+            gray_a_warp_on_b = cv2.warpAffine(gray_img_a,
+                                              transform,
+                                              (cols, rows))
+            a_warp_on_b = Tensor(cv2.cvtColor(gray_a_warp_on_b,
+                                              cv2.COLOR_GRAY2BGR)).permute(2,
+                                                                           0,
+                                                                           1).unsqueeze(0)
 
-        couple_imgs = cat([denorm_img_a,
-                           denorm_img_b])
+            couple_imgs = cat([denorm_img_a,
+                               denorm_img_b])
 
-        if not tag:
-            log_name = 'sample_A/sample_B'
-            warp_name = 'A warp on B'
-        elif isinstance(tag, str):
-            log_name = '{}\tsample_A/sample_B'.format(tag)
-            warp_name = '{}\tA warp on B'.format(tag)
+            if not tag:
+                log_name = 'sample_A/sample_B'
+                warp_name = 'A warp on B'
+            elif isinstance(tag, str):
+                log_name = '{}\tsample_A/sample_B'.format(tag)
+                warp_name = '{}\tA warp on B'.format(tag)
+            else:
+                raise ValueError("Unexpected type for 'tag', must be of type string.")
+
+            tb_writer.add_images(log_name,
+                                 make_grid(couple_imgs).unsqueeze(0),
+                                 counter)
+            tb_writer.add_images(warp_name,
+                                 a_warp_on_b,
+                                 counter)
+
         else:
-            raise ValueError("Unexpected type for 'tag', must be of type string.")
-
-        tb_writer.add_images(log_name,
-                             make_grid(couple_imgs).unsqueeze(0),
-                             counter)
-        tb_writer.add_images(warp_name,
-                             a_warp_on_b,
-                             counter)
+            break
 
     return
