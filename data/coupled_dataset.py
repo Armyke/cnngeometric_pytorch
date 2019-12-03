@@ -30,18 +30,17 @@ class CoupledDataset(Dataset):
             Dict: {
                    'image_a': dataset image cropped over vertices
                    'image_b': transformation destination image
+                   'vertices_a': vertices of image a to warp
                    'theta': transformation from src (a) to dst (b)
                    }
 
     """
 
     def __init__(self, csv_file, training_image_path, output_size=(480, 640),
-                 geometric_model='affine', transform=None,
-                 mode=None, template=None):
+                 geometric_model='affine', transform=None):
         self.out_h, self.out_w = output_size
         # read csv file
         self.train_data = pd.read_csv(csv_file)
-        self.mode = mode
         self.img_a_names = self.train_data.iloc[:, 0]
 
         self.img_a_vertices = self.train_data.iloc[:, 2]
@@ -52,7 +51,6 @@ class CoupledDataset(Dataset):
         self.transform = transform
         self.geometric_model = geometric_model
         self.affineTnf = GeometricTnf(out_h=self.out_h, out_w=self.out_w, use_cuda=False)
-        self.template = template
 
     def __len__(self):
         return len(self.train_data)
@@ -60,10 +58,7 @@ class CoupledDataset(Dataset):
     def __getitem__(self, idx):
 
         # read image
-        if not self.template:
-            img_name_a = os.path.join(self.training_image_path, self.img_a_names[idx])
-        else:
-            img_name_a = self.template
+        img_name_a = os.path.join(self.training_image_path, self.img_a_names[idx])
 
         img_name_b = os.path.join(self.training_image_path, self.img_b_names[idx])
 
@@ -109,11 +104,9 @@ class CoupledDataset(Dataset):
             image_b = self.affineTnf(Variable(image_b.unsqueeze(0), requires_grad=False)
                                      ).data.squeeze(0)
 
-        if self.mode == 'test':
-            sample = {'image_a': image_a, 'vertices_a': vertices,
-                      'image_b': image_b, 'theta': theta}
-        else:
-            sample = {'image_a': image_a, 'image_b': image_b, 'theta': theta}
+        # if self.mode == 'test':
+        sample = {'image_a': image_a, 'vertices_a': torch.Tensor(vertices),
+                  'image_b': image_b, 'theta': theta}
 
         if self.transform:
             sample = self.transform(sample)

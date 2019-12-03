@@ -1,11 +1,10 @@
 from __future__ import print_function, division
 import cv2
+import numpy as np
 from tqdm import tqdm
 from torch import Tensor, cat
 
 from image.normalization import normalize_image
-
-from torchvision.utils import make_grid
 
 
 def train(epoch, model, loss_fn, optimizer,
@@ -61,9 +60,6 @@ def train(epoch, model, loss_fn, optimizer,
                 log_images(tb_writer,
                            batch, theta,
                            batch_idx, 'Model Output')
-                log_images(tb_writer,
-                           tnf_batch, tnf_batch['theta_GT'],
-                           batch_idx, 'Ground Truth')
 
     train_loss /= len(dataloader)
     print('Train set: Average loss: {:.4f}'.format(train_loss))
@@ -101,7 +97,7 @@ def validate_model(model, loss_fn,
     return val_loss
 
 
-def log_images(tb_writer, batch, tnf_matrices, counter, n_max=1, tag=None):
+def log_images(tb_writer, batch, tnf_matrices, counter, tag=None, n_max=1):
     """
     Fn to log image batches
 
@@ -109,64 +105,69 @@ def log_images(tb_writer, batch, tnf_matrices, counter, n_max=1, tag=None):
     :param batch: Batch of samples
     :param tnf_matrices: Batch of transformations to apply
     :param counter: Epoch index
-    :param n_max: Maximum numbers of images per batch to display
     :param tag: Default None, if a string is specified tags the log
-    with it as a prefix
+     with it as a prefix
+    :param n_max: Maximum numbers of images per batch to display
     :return: None
     """
 
-    try:
-        images = zip(batch['image_a'], batch['image_b'], tnf_matrices)
-    except KeyError:
-        images = zip(batch['source_image'], batch['target_image'], tnf_matrices)
+    images = zip(batch['image_a'], batch['image_b'], batch['vertices_a'], tnf_matrices)
 
-    for idx, (img_a, img_b, aff_matrix) in enumerate(images):
+    for idx, (img_a, img_b, vertices, aff_matrix) in enumerate(images):
         if idx < n_max:
 
-            denorm_img_a = normalize_image(img_a.unsqueeze(0),
+            denorm_a_img = normalize_image(img_a.unsqueeze(0),
                                            forward=False)
-            denorm_img_b = normalize_image(img_b.unsqueeze(0),
+            denorm_b_img = normalize_image(img_b.unsqueeze(0),
                                            forward=False)
             transform = aff_matrix.cpu().detach().reshape([2, 3]).numpy()
 
-            # convert to gray-scale the reshaped image in the correct order:
-            # (height, width, n_channels)
-            gray_img_a = cv2.cvtColor(denorm_img_a.squeeze(0).permute(1,
-                                                                      2,
-                                                                      0).cpu().numpy(),
-                                      cv2.COLOR_BGR2GRAY)
+            # get vertices to warp
+            vertices = np.array(vertices)
+            # add ones to warping points
+            to_warp_pts = np.hstack([vertices,
+                                     np.ones(shape=(len(vertices), 1))])
 
-            # we have to warp the normalized points and then denormalize the image
-            # apply predicted affine transformation
-            rows, cols = denorm_img_a.squeeze(0).shape[1:]
-            gray_a_warp_on_b = cv2.warpAffine(gray_img_a,
-                                              transform,
-                                              (cols, rows))
-            a_warp_on_b = Tensor(cv2.cvtColor(gray_a_warp_on_b,
-                                              cv2.COLOR_GRAY2BGR)).permute(2,
-                                                                           0,
-                                                                           1).unsqueeze(0)
+            # warp points through affine matrix
+            warped_pts = transform.dot(to_warp_pts.T).T
 
-            couple_imgs = cat([denorm_img_a,
-                               denorm_img_b])
+            # denormalize warped points
+            out_img_y, out_img_x = denorm_b_img.shape[2:]
+            src_img_y, src_img_x = denorm_a_img.shape[2:]
+
+            original_pts = np.array([[int(point[0] * src_img_x), int(point[1] * src_img_y)] for point in to_warp_pts],
+                                    np.int32).reshape((-1, 1, 2))
+            to_draw_pts = np.array([[int(point[0] * out_img_x), int(point[1] * out_img_y)] for point in warped_pts],
+                                   np.int32).reshape((-1, 1, 2))
+
+            drawn_a_img = np.moveaxis(denorm_a_img.squeeze().numpy(), 0, 2)
+            drawn_b_img = np.moveaxis(denorm_b_img.squeeze().numpy(), 0, 2)
+
+            drawn_a_img = np.ones(drawn_a_img.shape) * np.array(drawn_a_img * 255,
+                                                                dtype=np.uint8)
+            drawn_b_img = np.ones(drawn_b_img.shape) * np.array(drawn_b_img * 255,
+                                                                dtype=np.uint8)
+
+            # draw warped points over template image
+            cv2.polylines(drawn_b_img, [to_draw_pts],
+                          True, (0, 0, 255), 7)
+            cv2.polylines(drawn_a_img, [original_pts],
+                          True, (0, 0, 255), 7)
+
+            # concatenate A and drawn B and save image
+            concat_img = cat([Tensor(drawn_a_img).double() / 255,
+                              Tensor(drawn_b_img).double() / 255], 1)
 
             if not tag:
-                log_name = 'sample_A/sample_B'
-                warp_name = 'A warp on B'
+                log_name = 'A warp on B'
             elif isinstance(tag, str):
-                log_name = '{}\tsample_A/sample_B'.format(tag)
-                warp_name = '{}\tA warp on B'.format(tag)
+                log_name = '{}\tA warp on B'.format(tag)
             else:
                 raise ValueError("Unexpected type for 'tag', must be of type string.")
 
             tb_writer.add_images(log_name,
-                                 make_grid(couple_imgs).unsqueeze(0),
-                                 counter)
-            tb_writer.add_images(warp_name,
-                                 a_warp_on_b,
+                                 concat_img.permute(2, 0, 1).unsqueeze(0),
                                  counter)
 
         else:
             break
-
-    return

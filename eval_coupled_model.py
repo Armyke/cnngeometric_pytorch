@@ -70,8 +70,8 @@ def test_and_save_alignment(batch, batch_index, model_output, out_dir):
                                             forward=False).squeeze(0).permute(1, 2, 0) * 255,
                             dtype=np.uint8)
 
-    # get bounding boxes to warp from VIA annotations
-    vertices = np.array(batch['vertices_a'])
+    # get vertices to warp
+    vertices = batch['vertices_a'][0]
     # add ones to warping points
     to_warp_pts = np.hstack([vertices,
                              np.ones(shape=(len(vertices), 1))])
@@ -135,8 +135,7 @@ def main(args):
     # Dataset and dataloader
     dataset = CoupledDataset(csv_file=csv_path,
                              training_image_path=args.pf_images_dir,
-                             transform=NormalizeImageDict(['image_a', 'image_b']),
-                             mode='test')  # template=args.template_path)
+                             transform=NormalizeImageDict(['image_a', 'image_b']))  # template=args.template_path)
 
     batch_size = 1
 
