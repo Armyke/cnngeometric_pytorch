@@ -84,18 +84,25 @@ def test_and_save_alignment(batch, batch_index, model_output, out_dir):
     warped_pts = transform.dot(to_warp_pts.T).T
 
     # denormalize warped points
-    img_y, img_x = denorm_b_img.shape[:2]
-    to_draw_pts = np.array([[int(point[0]*img_x), int(point[1]*img_y)] for point in warped_pts],
+    out_img_y, out_img_x = denorm_b_img.shape[:2]
+    src_img_y, src_img_x = denorm_a_img.shape[:2]
+
+    original_pts = np.array([[int(point[0]*src_img_x), int(point[1]*src_img_y)] for point in to_warp_pts],
+                            np.int32).reshape((-1, 1, 2))
+    to_draw_pts = np.array([[int(point[0]*out_img_x), int(point[1]*out_img_y)] for point in warped_pts],
                            np.int32).reshape((-1, 1, 2))
 
     drawn_b_image = np.ones(denorm_b_img.shape)*denorm_b_img
+    drawn_a_image = np.ones(denorm_a_img.shape) * denorm_a_img
 
     # draw warped points over template image
     cv2.polylines(drawn_b_image,  [to_draw_pts],
                   True, (0, 0, 255), 7)
+    cv2.polylines(drawn_a_image,  [original_pts],
+                  True, (0, 0, 255), 7)
 
     # concatenate A and drawn B and save image
-    concat_img = np.concatenate([denorm_a_img, drawn_b_image], axis=1)
+    concat_img = np.concatenate([drawn_a_image, drawn_b_image], axis=1)
 
     out_path = os.path.join(out_dir, 'drawn_{}.png'.format(batch_index))
 
