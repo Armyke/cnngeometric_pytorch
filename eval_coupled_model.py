@@ -84,7 +84,7 @@ def test_and_save_alignment(batch, batch_index, model_output, out_dir):
     warped_pts = transform.dot(to_warp_pts.T).T
 
     # denormalize warped points
-    img_x, img_y = denorm_b_img.shape[:2]
+    img_y, img_x = denorm_b_img.shape[:2]
     to_draw_pts = np.array([[int(point[0]*img_x), int(point[1]*img_y)] for point in warped_pts],
                            np.int32).reshape((-1, 1, 2))
 
@@ -92,7 +92,7 @@ def test_and_save_alignment(batch, batch_index, model_output, out_dir):
 
     # draw warped points over template image
     cv2.polylines(drawn_b_image,  [to_draw_pts],
-                  True, (0, 0, 255))
+                  True, (0, 0, 255), 7)
 
     # concatenate A and drawn B and save image
     concat_img = np.concatenate([denorm_a_img, drawn_b_image], axis=1)
@@ -134,7 +134,7 @@ def main(args):
     batch_size = 1
 
     dataloader = DataLoader(dataset, batch_size=batch_size,
-                            shuffle=False, num_workers=4)
+                            shuffle=True, num_workers=4)
 
     # Set Tnf pair generation func
     pair_generation_tnf = CoupledPairTnf(use_cuda=use_cuda)
