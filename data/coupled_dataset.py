@@ -41,16 +41,11 @@ class CoupledDataset(Dataset):
         self.out_h, self.out_w = output_size
         # read csv file
         self.train_data = pd.read_csv(csv_file)
+        self.mode = mode
+        self.img_a_names = self.train_data.iloc[:, 0]
 
-        if mode == 'test':
-            assert(isinstance(template, str))
-            self.img_a_names = pd.Series([template] * len(self.train_data.iloc[:, 0]))
-
-        else:
-            self.img_a_names = self.train_data.iloc[:, 0]
-
-        self.img_b_names = self.train_data.iloc[:, 1]
         self.img_a_vertices = self.train_data.iloc[:, 2]
+        self.img_b_names = self.train_data.iloc[:, 1]
         self.theta_array = self.train_data.iloc[:, 3:].values.astype('float')
         # copy arguments
         self.training_image_path = training_image_path
@@ -114,7 +109,11 @@ class CoupledDataset(Dataset):
             image_b = self.affineTnf(Variable(image_b.unsqueeze(0), requires_grad=False)
                                      ).data.squeeze(0)
 
-        sample = {'image_a': image_a, 'image_b': image_b, 'theta': theta}
+        if self.mode == 'test':
+            sample = {'image_a': image_a, 'vertices_a': vertices,
+                      'image_b': image_b, 'theta': theta}
+        else:
+            sample = {'image_a': image_a, 'image_b': image_b, 'theta': theta}
 
         if self.transform:
             sample = self.transform(sample)
