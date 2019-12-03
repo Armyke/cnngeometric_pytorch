@@ -76,7 +76,7 @@ def test_and_save_alignment(batch, batch_index, model_output, out_dir):
     to_warp_pts = np.hstack([vertices,
                              np.ones(shape=(len(vertices), 1))])
 
-    aff_matrix = model_output[0][[3, 2, 5, 1, 0, 4]].reshape(2, 3)
+    aff_matrix = model_output[0].reshape(2, 3)
 
     transform = aff_matrix.detach().numpy()
 
@@ -92,7 +92,7 @@ def test_and_save_alignment(batch, batch_index, model_output, out_dir):
     to_draw_pts = np.array([[int(point[0]*out_img_x), int(point[1]*out_img_y)] for point in warped_pts],
                            np.int32).reshape((-1, 1, 2))
 
-    drawn_b_image = np.ones(denorm_b_img.shape)*denorm_b_img
+    drawn_b_image = np.ones(denorm_b_img.shape) * denorm_b_img
     drawn_a_image = np.ones(denorm_a_img.shape) * denorm_a_img
 
     # draw warped points over template image
