@@ -197,10 +197,10 @@ def main():
 
     # Initialize DataLoaders
     dataloader = DataLoader(dataset, batch_size=args.batch_size,
-                            shuffle=True, num_workers=4)
+                            shuffle=True, num_workers=4, drop_last=True)
 
     dataloader_val = DataLoader(dataset_val, batch_size=args.batch_size,
-                                shuffle=True, num_workers=4)
+                                shuffle=True, num_workers=4, drop_last=True)
 
     # Optimizer and eventual scheduler
     optimizer = optim.Adam(model.FeatureRegression.parameters(), lr=args.lr)
