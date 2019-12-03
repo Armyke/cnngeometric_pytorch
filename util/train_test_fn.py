@@ -109,6 +109,7 @@ def log_images(tb_writer, batch, tnf_matrices, counter, n_max=1, tag=None):
     :param batch: Batch of samples
     :param tnf_matrices: Batch of transformations to apply
     :param counter: Epoch index
+    :param n_max: Maximum numbers of images per batch to display
     :param tag: Default None, if a string is specified tags the log
     with it as a prefix
     :return: None
