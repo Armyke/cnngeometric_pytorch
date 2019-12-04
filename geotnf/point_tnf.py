@@ -1,4 +1,4 @@
-import torch
+from torch import bmm
 from geotnf.transformation import TpsGridGen
 
 
@@ -25,7 +25,7 @@ class PointTnf(object):
 
     def affPointTnf(self, theta, points):
         theta_mat = theta.view(-1, 2, 3)
-        warped_points = torch.bmm(theta_mat[:, :, :2], points)
+        warped_points = bmm(theta_mat[:, :, :2], points)
         warped_points += theta_mat[:, :, 2].unsqueeze(2).expand_as(warped_points)
         return warped_points
 

@@ -12,5 +12,6 @@ trained_models/
 **/*.bak
 *.png
 .idea
+.pylintrc
 venv/
 resources/

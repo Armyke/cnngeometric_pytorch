@@ -1,11 +1,13 @@
-import shutil
-from collections import OrderedDict
-
-import torch
-import argparse
-from torch.autograd import Variable
 from os import makedirs
 from os.path import exists, join, basename, dirname
+
+from collections import OrderedDict
+import argparse
+
+import shutil
+
+import torch
+from torch.autograd import Variable
 
 from model.cnn_geometric_model import CNNGeometric
 

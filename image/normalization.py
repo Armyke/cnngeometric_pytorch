@@ -1,6 +1,6 @@
-import torch
-from torchvision import transforms
+from torch import FloatTensor
 from torch.autograd import Variable
+from torchvision import transforms
 
 
 class NormalizeImageDict(object):
@@ -36,12 +36,12 @@ def normalize_image(image, forward=True,
         std = list(std)
 
         im_size = image.size()
-        mean = torch.FloatTensor(mean).unsqueeze(1).unsqueeze(2)
-        std = torch.FloatTensor(std).unsqueeze(1).unsqueeze(2)
+        mean = FloatTensor(mean).unsqueeze(1).unsqueeze(2)
+        std = FloatTensor(std).unsqueeze(1).unsqueeze(2)
         if image.is_cuda:
             mean = mean.cuda()
             std = std.cuda()
-        if isinstance(image, torch.autograd.Variable):
+        if isinstance(image, Variable):
             mean = Variable(mean, requires_grad=False)
             std = Variable(std, requires_grad=False)
         if forward:

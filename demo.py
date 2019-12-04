@@ -1,17 +1,26 @@
 from __future__ import print_function, division
 import os
 import argparse
-from torch.utils.data import DataLoader
-from model.cnn_geometric_model import CNNGeometric
-from data.pf_dataset import PFDataset
-from data.download_datasets import download_PF_willow
-from image.normalization import NormalizeImageDict, normalize_image
-from util.torch_util import BatchTensorToVars
-from geotnf.transformation import GeometricTnf
-from geotnf.point_tnf import *
+from collections import OrderedDict
+
 import matplotlib.pyplot as plt
 from skimage import io
-from collections import OrderedDict
+
+import torch
+from torch.utils.data import DataLoader
+
+from model.cnn_geometric_model import CNNGeometric
+
+from data.pf_dataset import PFDataset
+from data.download_datasets import download_PF_willow
+
+from image.normalization import NormalizeImageDict, normalize_image
+
+from util.torch_util import BatchTensorToVars
+
+from geotnf.transformation import GeometricTnf
+from geotnf.point_tnf import *
+
 
 # for compatibility with Python 2
 try:

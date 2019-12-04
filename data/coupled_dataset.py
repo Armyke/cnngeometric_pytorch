@@ -1,14 +1,18 @@
 from __future__ import print_function, division
-import torch
+
 import os
 import ast
 from copy import deepcopy
+
 import cv2
 import pandas as pd
 import numpy as np
+
+from torch import Tensor
 from torch.utils.data import Dataset
-from geotnf.transformation import GeometricTnf
 from torch.autograd import Variable
+
+from geotnf.transformation import GeometricTnf
 
 
 class CoupledDataset(Dataset):
@@ -21,10 +25,6 @@ class CoupledDataset(Dataset):
             training_image_path (string): Directory with all the images.
             transform (callable): Transformation for post-processing the training pair
             (eg. image normalization)
-            mode (string): Default None, other possible value is 'test',
-            if mode == 'test' template argument must be valued as well
-            template (string): Default None, path to a specific template over which
-            warp images
 
     Returns:
             Dict: {
@@ -84,9 +84,9 @@ class CoupledDataset(Dataset):
         image_a = blank_outside_verts(image_a, vertices)
 
         # make arrays float tensor for subsequent processing
-        image_a = torch.Tensor(image_a.astype(np.float32))
-        image_b = torch.Tensor(image_b.astype(np.float32))
-        theta = torch.Tensor(theta.astype(np.float32))
+        image_a = Tensor(image_a.astype(np.float32))
+        image_b = Tensor(image_b.astype(np.float32))
+        theta = Tensor(theta.astype(np.float32))
 
         # permute order of image to CHW
         image_a = image_a.transpose(1, 2).transpose(0, 1)
@@ -105,7 +105,7 @@ class CoupledDataset(Dataset):
                                      ).data.squeeze(0)
 
         # if self.mode == 'test':
-        sample = {'image_a': image_a, 'vertices_a': torch.Tensor(vertices),
+        sample = {'image_a': image_a, 'vertices_a': Tensor(vertices),
                   'image_b': image_b, 'theta': theta}
 
         if self.transform:

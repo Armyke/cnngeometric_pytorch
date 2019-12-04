@@ -6,6 +6,7 @@ from argparse import ArgumentParser
 import numpy as np
 import cv2
 
+import torch
 from torch.utils.data import DataLoader
 
 from data.coupled_dataset import CoupledDataset
@@ -16,7 +17,6 @@ from image.normalization import NormalizeImageDict, normalize_image
 from util.torch_util import load_torch_model
 
 from geotnf.transformation import CoupledPairTnf
-from geotnf.point_tnf import *
 
 """
 

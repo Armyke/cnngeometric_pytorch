@@ -1,12 +1,16 @@
 from __future__ import print_function, division
-import torch
+
 import os
-from skimage import io
+
 import pandas as pd
 import numpy as np
+from skimage import io
+from torch import Tensor
+
 from torch.utils.data import Dataset
-from geotnf.transformation import GeometricTnf
 from torch.autograd import Variable
+
+from geotnf.transformation import GeometricTnf
 
 
 class SynthDataset(Dataset):
@@ -37,13 +41,13 @@ class SynthDataset(Dataset):
         self.out_h, self.out_w = output_size
         # read csv file
         self.train_data = pd.read_csv(csv_file)
-        self.img_names = self.train_data.iloc[:,0]
+        self.img_names = self.train_data.iloc[:, 0]
         self.theta_array = self.train_data.iloc[:, 1:].values.astype('float')
         # copy arguments
         self.training_image_path = training_image_path
         self.transform = transform
         self.geometric_model = geometric_model
-        self.affineTnf = GeometricTnf(out_h=self.out_h, out_w=self.out_w, use_cuda = False) 
+        self.affineTnf = GeometricTnf(out_h=self.out_h, out_w=self.out_w, use_cuda=False)
         
     def __len__(self):
         return len(self.train_data)
@@ -78,16 +82,19 @@ class SynthDataset(Dataset):
                 theta[4] = (1+(theta[4]-0.5)*2*self.random_s)*np.cos(alpha)
                 theta = theta.reshape(2, 3)
 
-            if self.geometric_model == 'tps':
+            elif self.geometric_model == 'tps':
 
                 theta = np.array([-1, -1, -1, 0, 0, 0, 1, 1, 1,
                                   -1, 0, 1, -1, 0, 1, -1, 0, 1])
 
-                theta = theta+(np.random.rand(18)-0.5)*2*self.random_t_tps               
-        
+                theta = theta+(np.random.rand(18)-0.5)*2*self.random_t_tps
+
+            else:
+                raise ValueError("Available values for geometric_model are 'affine' or 'tps'")
+
         # make arrays float tensor for subsequent processing
-        image = torch.Tensor(image.astype(np.float32))
-        theta = torch.Tensor(theta.astype(np.float32))
+        image = Tensor(image.astype(np.float32))
+        theta = Tensor(theta.astype(np.float32))
 
         # permute order of image to CHW
         image = image.transpose(1, 2).transpose(0, 1)

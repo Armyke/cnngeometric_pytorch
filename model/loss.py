@@ -6,8 +6,6 @@ import torch.nn as nn
 
 from torch.autograd import Variable
 
-from torch.nn import MSELoss
-
 from geotnf.point_tnf import PointTnf
 
 
