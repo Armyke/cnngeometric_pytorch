@@ -12,3 +12,5 @@ trained_models/
 **/*.bak
 *.png
 .idea
+venv/
+resources/
