@@ -87,18 +87,21 @@ def test_and_save_alignment(batch, batch_index, model_output, out_dir):
     out_img_y, out_img_x = denorm_b_img.shape[:2]
     src_img_y, src_img_x = denorm_a_img.shape[:2]
 
-    original_pts = np.array([[int(point[0]*src_img_x), int(point[1]*src_img_y)] for point in to_warp_pts],
+    original_pts = np.array([[int(point[0]*src_img_x),
+                              int(point[1]*src_img_y)] for point in to_warp_pts],
                             np.int32).reshape((-1, 1, 2))
-    to_draw_pts = np.array([[int(point[0]*out_img_x), int(point[1]*out_img_y)] for point in warped_pts],
+
+    to_draw_pts = np.array([[int(point[0]*out_img_x),
+                             int(point[1]*out_img_y)] for point in warped_pts],
                            np.int32).reshape((-1, 1, 2))
 
     drawn_b_image = np.ones(denorm_b_img.shape) * denorm_b_img
     drawn_a_image = np.ones(denorm_a_img.shape) * denorm_a_img
 
     # draw warped points over template image
-    cv2.polylines(drawn_b_image,  [to_draw_pts],
+    cv2.polylines(drawn_b_image, [to_draw_pts],
                   True, (0, 0, 255), 7)
-    cv2.polylines(drawn_a_image,  [original_pts],
+    cv2.polylines(drawn_a_image, [original_pts],
                   True, (0, 0, 255), 7)
 
     # concatenate A and drawn B and save image
@@ -107,8 +110,6 @@ def test_and_save_alignment(batch, batch_index, model_output, out_dir):
     out_path = os.path.join(out_dir, 'drawn_{}.png'.format(batch_index))
 
     cv2.imwrite(out_path, concat_img)
-
-    return
 
 
 def main(args):
@@ -124,7 +125,7 @@ def main(args):
     csv_path_list = glob(os.path.join(args.pf_path, '*.csv'))
     if len(csv_path_list) > 1:
         print("!!!!WARNING!!!! multiple csv files found, using first in glob order")
-    elif not len(csv_path_list):
+    elif not csv_path_list:
         raise FileNotFoundError("No csvs where found in the specified path!!!")
 
     if not os.path.exists(args.out_dir):
@@ -135,7 +136,7 @@ def main(args):
     # Dataset and dataloader
     dataset = CoupledDataset(csv_file=csv_path,
                              training_image_path=args.pf_images_dir,
-                             transform=NormalizeImageDict(['image_a', 'image_b']))  # template=args.template_path)
+                             transform=NormalizeImageDict(['image_a', 'image_b']))
 
     batch_size = 1
 

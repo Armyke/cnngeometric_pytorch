@@ -32,32 +32,32 @@ def normalize_image(image, forward=True,
                     mean=(0.485, 0.456, 0.406),
                     std=(0.229, 0.224, 0.225)):
 
-        mean = list(mean)
-        std = list(std)
+    mean = list(mean)
+    std = list(std)
 
-        im_size = image.size()
-        mean = FloatTensor(mean).unsqueeze(1).unsqueeze(2)
-        std = FloatTensor(std).unsqueeze(1).unsqueeze(2)
-        if image.is_cuda:
-            mean = mean.cuda()
-            std = std.cuda()
-        if isinstance(image, Variable):
-            mean = Variable(mean, requires_grad=False)
-            std = Variable(std, requires_grad=False)
-        if forward:
-            if len(im_size) == 3:
-                result = image.sub(mean.expand(im_size)).div(std.expand(im_size))
-            elif len(im_size) == 4:
-                result = image.sub(mean.unsqueeze(0).expand(im_size)).div(std.unsqueeze(0).expand(im_size))
-            else:
-                raise TypeError("Couldn't read image due to an unexpected format")
-
+    im_size = image.size()
+    mean = FloatTensor(mean).unsqueeze(1).unsqueeze(2)
+    std = FloatTensor(std).unsqueeze(1).unsqueeze(2)
+    if image.is_cuda:
+        mean = mean.cuda()
+        std = std.cuda()
+    if isinstance(image, Variable):
+        mean = Variable(mean, requires_grad=False)
+        std = Variable(std, requires_grad=False)
+    if forward:
+        if len(im_size) == 3:
+            result = image.sub(mean.expand(im_size)).div(std.expand(im_size))
+        elif len(im_size) == 4:
+            result = image.sub(mean.unsqueeze(0).expand(im_size)).div(std.unsqueeze(0).expand(im_size))
         else:
-            if len(im_size) == 3:
-                result = image.mul(std.expand(im_size)).add(mean.expand(im_size))
-            elif len(im_size) == 4:
-                result = image.mul(std.unsqueeze(0).expand(im_size)).add(mean.unsqueeze(0).expand(im_size))
-            else:
-                raise TypeError("Couldn't read image due to an unexpected format")
+            raise TypeError("Couldn't read image due to an unexpected format")
 
-        return result
+    else:
+        if len(im_size) == 3:
+            result = image.mul(std.expand(im_size)).add(mean.expand(im_size))
+        elif len(im_size) == 4:
+            result = image.mul(std.unsqueeze(0).expand(im_size)).add(mean.unsqueeze(0).expand(im_size))
+        else:
+            raise TypeError("Couldn't read image due to an unexpected format")
+
+    return result

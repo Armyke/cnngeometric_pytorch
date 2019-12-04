@@ -1,3 +1,10 @@
+"""
+
+Script to train the model as presented in the CNNGeometric CVPR'17 paper
+using synthetically warped image pairs and strong supervision
+
+"""
+
 from __future__ import print_function, division
 
 import os
@@ -29,13 +36,6 @@ from image.normalization import NormalizeImageDict
 from util.train_test_fn import train, validate_model
 from util.torch_util import save_checkpoint, str_to_bool, load_torch_model
 from util.custom_lr_schedulers import TruncateCosineScheduler
-
-"""
-
-Script to train the model as presented in the CNNGeometric CVPR'17 paper
-using synthetically warped image pairs and strong supervision
-
-"""
 
 
 def parse_flags():
@@ -119,6 +119,9 @@ def parse_flags():
 
 
 def main():
+    """
+    Parse flags, initialize paths and runs training
+    """
 
     args = parse_flags()
 
@@ -177,7 +180,7 @@ def main():
     train_csv_path_list = glob(os.path.join(args.training_tnf_csv, '*train.csv'))
     if len(train_csv_path_list) > 1:
         print("!!!!WARNING!!!! multiple train csv files found, using first in glob order")
-    elif not len(train_csv_path_list):
+    elif not train_csv_path_list:
         raise FileNotFoundError("No training csv where found in the specified path!!!")
 
     train_csv_path = train_csv_path_list[0]
@@ -185,7 +188,7 @@ def main():
     val_csv_path_list = glob(os.path.join(args.training_tnf_csv, '*val.csv'))
     if len(val_csv_path_list) > 1:
         print("!!!!WARNING!!!! multiple train csv files found, using first in glob order")
-    elif not len(val_csv_path_list):
+    elif not val_csv_path_list:
         raise FileNotFoundError("No training csv where found in the specified path!!!")
 
     val_csv_path = val_csv_path_list[0]
@@ -311,14 +314,13 @@ def main():
         # remember best loss
         is_best = val_loss < best_val_loss
         best_val_loss = min(val_loss, best_val_loss)
-        save_checkpoint({
-                         'epoch': epoch + 1,
+        save_checkpoint({'epoch': epoch + 1,
                          'args': args,
                          'state_dict': model.state_dict(),
                          'best_val_loss': best_val_loss,
-                         'optimizer': optimizer.state_dict(),
-                         },
-                        is_best, checkpoint_path)
+                         'optimizer': optimizer.state_dict()},
+                        is_best,
+                        checkpoint_path)
 
     logs_writer.close()
     print('Done!')
