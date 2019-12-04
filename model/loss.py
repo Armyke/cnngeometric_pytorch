@@ -63,7 +63,7 @@ class GridLossWithMSE(nn.Module):
         if use_cuda:
             self.P = self.P.cuda();
 
-    def forward(self, theta, theta_GT):
+    def forward(self, theta, theta_GT, tb_writer=None, step=None):
         # expand grid according to batch size
         batch_size = theta.size()[0]
         P = self.P.expand(batch_size, 2, self.N)
@@ -80,6 +80,14 @@ class GridLossWithMSE(nn.Module):
 
         # compute MSE on affinity matrices
         mse_loss = ((theta.view([-1, 2, 3]) - theta_GT)**2).mean()
+
+        if tb_writer is not None and step is not None:
+            tb_writer.add_scalar('grid loss',
+                                 grid_loss.data.item(),
+                                 step)
+            tb_writer.add_scalar('MSE loss',
+                                 mse_loss.data.item(),
+                                 step)
 
         return self.alpha * grid_loss + (1 - self.alpha) * mse_loss
 

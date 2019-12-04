@@ -35,11 +35,21 @@ def train(epoch, model, loss_fn, optimizer,
 
         if loss_fn._get_name() == 'MSELoss':
             loss = loss_fn(theta, tnf_batch['theta_GT'].view([-1, 6]))
+
+        elif loss_fn._get_name() == 'GridLossWithMSE':
+            loss = loss_fn(theta, tnf_batch['theta_GT'],
+                           tb_writer, (epoch - 1) * len(dataloader) + batch_idx)
+
         else:
             loss = loss_fn(theta, tnf_batch['theta_GT'])
 
         loss.backward()
         optimizer.step()
+
+        # log loss
+        tb_writer.add_scalar('training loss',
+                             loss.data.item(),
+                             (epoch - 1) * len(dataloader) + batch_idx)
 
         if scheduler:
             scheduler.step()
@@ -52,11 +62,7 @@ def train(epoch, model, loss_fn, optimizer,
 
         # log every log_interval
         if batch_idx % log_interval == 0:
-            print('\tLoss: {:.6f}'.format(loss.data.item()))
             if tb_writer:
-                tb_writer.add_scalar('training loss',
-                                     loss.data.item(),
-                                     (epoch - 1) * len(dataloader) + batch_idx)
                 log_images(tb_writer,
                            batch, theta,
                            batch_idx, 'Model Output')
@@ -77,7 +83,11 @@ def validate_model(model, loss_fn,
         theta = model(tnf_batch)
 
         if loss_fn._get_name() == 'MSELoss':
-            loss = loss_fn(theta, tnf_batch['theta_GT'].reshape([16, 6]))
+            loss = loss_fn(theta, tnf_batch['theta_GT'].view([-1, 6]))
+
+        elif loss_fn._get_name() == 'GridLossWithMSE':
+            loss = loss_fn(theta, tnf_batch['theta_GT'])
+
         else:
             loss = loss_fn(theta, tnf_batch['theta_GT'])
 
