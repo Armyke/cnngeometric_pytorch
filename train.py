@@ -23,6 +23,7 @@ from image.normalization import NormalizeImageDict
 
 from util.train_test_fn import train, validate_model
 from util.torch_util import save_checkpoint, str_to_bool, load_torch_model
+from util.custom_lr_schedulers import TruncateCosineScheduler
 
 """
 
@@ -53,11 +54,18 @@ def parse_flags():
     parser.add_argument('--trained_models_fn', type=str, default='checkpoint_adam',
                         help='trained model filename')
     # Optimization parameters
-    parser.add_argument('--lr', type=float, default=0.01,
+    parser.add_argument('--lr', type=float, default=0.005,
                         help='learning rate. (Starting lr when using scheduler)')
     parser.add_argument('--lr_scheduler', type=str_to_bool,
                         nargs='?', const=True, default=True,
                         help='Bool (default True), whether to use a decaying lr_scheduler')
+    parser.add_argument('--scheduler_type', type=str,
+                        default='truncated_cosine',
+                        help='If using  a lr_scheduler is possible to choose which:'
+                             'Available types are:'
+                             '- truncated_cosine (Default)'
+                             '- cosine'
+                             '- decay')
     parser.add_argument('--lr_max_iter', type=int, default=1000,
                         help='Number of steps between lr starting value and'
                              ' lr_min (default=1e-5) when choosing lr_scheduler')
@@ -206,10 +214,21 @@ def main():
     optimizer = optim.Adam(model.FeatureRegression.parameters(), lr=args.lr)
 
     if args.lr_scheduler:
-        scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer,
-                                                               T_max=args.lr_max_iter,
-                                                               eta_min=args.lr_min)
-        # scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, 'min')
+
+        if args.scheduler_type == 'cosine':
+            print('Using cosine learning rate scheduler')
+            scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer,
+                                                                   T_max=args.lr_max_iter,
+                                                                   eta_min=args.lr_min)
+
+        elif args.scheduler_type == 'decay':
+            print('Using decay learning rate scheduler')
+            scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, 'min')
+
+        else:
+            print('Using truncated cosine with decay learning rate scheduler')
+            scheduler = TruncateCosineScheduler(optimizer, len(dataloader),
+                                                args.num_epochs - 1)
     else:
         scheduler = False
 
