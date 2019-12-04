@@ -10,7 +10,7 @@ from torch.utils.data import DataLoader
 from torch.utils.tensorboard import SummaryWriter
 
 from model.cnn_geometric_model import CNNGeometric
-from model.loss import TransformedGridLoss
+from model.loss import TransformedGridLoss, GridLossWithMSE
 
 from data.synth_dataset import SynthDataset
 from data.coupled_dataset import CoupledDataset
@@ -84,8 +84,12 @@ def parse_flags():
     # Model parameters
     parser.add_argument('--geometric_model', type=str, default='affine',
                         help='geometric model to be regressed at output: affine or tps')
-    parser.add_argument('--use_mse_loss', type=str_to_bool, nargs='?', const=True, default=False,
-                        help='Use MSE loss on tnf. parameters')
+    parser.add_argument('--loss', type=str, default='grid_loss',
+                        help='Which loss is intended to use.'
+                             'Available types are:'
+                             '- grid_loss (Default)'
+                             '- mse'
+                             '- sum (Which returns the sum of both losses)')
     parser.add_argument('--feature_extraction_cnn', type=str, default='vgg',
                         help='Feature extraction architecture: vgg/resnet101')
     # Synthetic dataset parameters
@@ -144,9 +148,15 @@ def main():
     else:
         model = load_torch_model(args, use_cuda)
 
-    if args.use_mse_loss:
+    if args.loss == 'mse':
         print('Using MSE loss...')
         loss = nn.MSELoss()
+
+    elif args.loss == 'sum':
+        print('Using the sum of MSE and grid loss...')
+        loss = GridLossWithMSE(use_cuda=use_cuda,
+                               geometric_model=args.geometric_model)
+
     else:
         print('Using grid loss...')
         loss = TransformedGridLoss(use_cuda=use_cuda,
@@ -205,10 +215,10 @@ def main():
 
     # Initialize DataLoaders
     dataloader = DataLoader(dataset, batch_size=args.batch_size,
-                            shuffle=True, num_workers=4, drop_last=True)
+                            shuffle=True, num_workers=4)
 
     dataloader_val = DataLoader(dataset_val, batch_size=args.batch_size,
-                                shuffle=True, num_workers=4, drop_last=True)
+                                shuffle=True, num_workers=4)
 
     # Optimizer and eventual scheduler
     optimizer = optim.Adam(model.FeatureRegression.parameters(), lr=args.lr)
@@ -226,7 +236,7 @@ def main():
             scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, 'min')
 
         else:
-            print('Using truncated cosine with decay learning rate scheduler')
+            print('Using truncated cosine with decay learning rate scheduler...')
             scheduler = TruncateCosineScheduler(optimizer, len(dataloader),
                                                 args.num_epochs - 1)
     else:
@@ -235,8 +245,13 @@ def main():
     # Train
 
     # Set up names for checkpoints
-    if args.use_mse_loss:
+    if args.loss == 'mse':
         ckpt = args.trained_models_fn + '_' + args.geometric_model + '_mse_loss' + args.feature_extraction_cnn
+        checkpoint_path = os.path.join(args.trained_models_dir,
+                                       args.trained_models_fn,
+                                       ckpt + '.pth.tar')
+    elif args.loss == 'sum':
+        ckpt = args.trained_models_fn + '_' + args.geometric_model + '_sum_loss' + args.feature_extraction_cnn
         checkpoint_path = os.path.join(args.trained_models_dir,
                                        args.trained_models_fn,
                                        ckpt + '.pth.tar')

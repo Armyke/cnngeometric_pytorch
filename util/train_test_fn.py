@@ -34,7 +34,7 @@ def train(epoch, model, loss_fn, optimizer,
         theta = model(tnf_batch)
 
         if loss_fn._get_name() == 'MSELoss':
-            loss = loss_fn(theta, tnf_batch['theta_GT'].reshape([16, 6]))
+            loss = loss_fn(theta, tnf_batch['theta_GT'].view([-1, 6]))
         else:
             loss = loss_fn(theta, tnf_batch['theta_GT'])
 
