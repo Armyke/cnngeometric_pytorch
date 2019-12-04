@@ -62,6 +62,7 @@ def train(epoch, model, loss_fn, optimizer,
 
         # log every log_interval
         if batch_idx % log_interval == 0:
+            print('\tLoss: {:.6f}'.format(loss.data.item()))
             if tb_writer:
                 log_images(tb_writer,
                            batch, theta,
@@ -95,7 +96,9 @@ def validate_model(model, loss_fn,
 
         # if possible log on TB an image_a, image_b couple with the relative predicted transform
         if coupled and tb_writer and batch_idx == 0:
-            log_images(tb_writer, batch, theta, epoch)
+            log_images(tb_writer, batch, theta, epoch,
+                       tag='Validation',
+                       n_max=len(batch['image_a']))
 
     val_loss /= len(dataloader)
     print('Validation set: Average loss: {:.4f}'.format(val_loss))
@@ -164,7 +167,7 @@ def log_images(tb_writer, batch, tnf_matrices, counter, tag=None, n_max=1):
             cv2.polylines(drawn_a_img, [original_pts],
                           True, (0, 0, 255), 7)
 
-            # concatenate A and drawn B and save image
+            # concatenate A and drawn B
             concat_img = cat([Tensor(drawn_a_img).double() / 255,
                               Tensor(drawn_b_img).double() / 255], 1)
 
@@ -175,6 +178,7 @@ def log_images(tb_writer, batch, tnf_matrices, counter, tag=None, n_max=1):
             else:
                 raise ValueError("Unexpected type for 'tag', must be of type string.")
 
+            # log image
             tb_writer.add_images(log_name,
                                  concat_img.permute(2, 0, 1).unsqueeze(0),
                                  counter)
