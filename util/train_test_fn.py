@@ -66,7 +66,8 @@ def train(epoch, model, loss_fn, optimizer,
             if tb_writer:
                 log_images(tb_writer,
                            batch, theta,
-                           batch_idx, 'Model Output')
+                           (epoch - 1) * len(dataloader) + batch_idx,
+                           'Model Output')
 
     train_loss /= len(dataloader)
     print('Train set: Average loss: {:.4f}'.format(train_loss))
