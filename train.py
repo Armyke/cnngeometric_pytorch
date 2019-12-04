@@ -10,6 +10,8 @@ from torch.utils.data import DataLoader
 from torch.utils.tensorboard import SummaryWriter
 
 from model.cnn_geometric_model import CNNGeometric
+from model.light_cnn_geo_model import CNNGeometric as LightCNN
+
 from model.loss import TransformedGridLoss, GridLossWithMSE
 
 from data.synth_dataset import SynthDataset
@@ -84,6 +86,8 @@ def parse_flags():
     # Model parameters
     parser.add_argument('--geometric_model', type=str, default='affine',
                         help='geometric model to be regressed at output: affine or tps')
+    parser.add_argument('--light_model', type=str_to_bool, default=False,
+                        help='Whether to use a light version of the model with less vgg layers')
     parser.add_argument('--loss', type=str, default='grid_loss',
                         help='Which loss is intended to use.'
                              'Available types are:'
@@ -139,12 +143,16 @@ def main():
             args.training_tnf_csv = 'training_data/pascal-synth-tps'
 
     # CNN model and loss
-    print('Creating CNN model...')
-
     if not args.pretrained:
-        model = CNNGeometric(use_cuda=use_cuda,
-                             geometric_model=args.geometric_model,
-                             feature_extraction_cnn=args.feature_extraction_cnn)
+        if args.light_model:
+            print('Creating light CNN model...')
+            model = LightCNN(use_cuda=use_cuda,
+                             geometric_model=args.geometric_model)
+        else:
+            print('Creating CNN model...')
+            model = CNNGeometric(use_cuda=use_cuda,
+                                 geometric_model=args.geometric_model,
+                                 feature_extraction_cnn=args.feature_extraction_cnn)
     else:
         model = load_torch_model(args, use_cuda)
 
