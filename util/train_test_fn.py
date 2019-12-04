@@ -76,6 +76,19 @@ def train(epoch, model, loss_fn, optimizer,
 def validate_model(model, loss_fn,
                    dataloader, pair_generation_tnf,
                    epoch, tb_writer=None, coupled=False):
+    """
+    Sets the model to eval() mode and evaluates
+
+    :param epoch: int, epoch index
+    :param model: pytorch model object
+    :param loss_fn: loss function of the model
+    :param dataloader: DataLoader object
+    :param pair_generation_tnf: Function to serve couples of samples
+    :param epoch: epoch index
+    :param tb_writer: pytorch TensorBoard SummaryWriter
+    :param coupled: Bool, whether the dataset is coupled or not
+    :return:
+    """
 
     model.eval()
     val_loss = 0
