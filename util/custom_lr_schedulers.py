@@ -6,10 +6,10 @@ from torch.optim.lr_scheduler import _LRScheduler
 class TruncateCosineScheduler(_LRScheduler):
 
     def __init__(self, optimizer,
-                 n_epochs: int, n_cycles: int,
+                 n_steps: int, n_cycles: int,
                  annealing: bool = True,
                  last_epoch=-1):
-        self.n_epochs = n_epochs
+        self.n_steps = n_steps
         self.n_cycles = n_cycles
         self.annealing = annealing
         self.last_epoch = last_epoch
@@ -17,10 +17,10 @@ class TruncateCosineScheduler(_LRScheduler):
 
     def get_lr(self):
         param = 1
-        epochs_per_cycle = math.floor(self.n_epochs / self.n_cycles)
+        epochs_per_cycle = math.floor(self.n_steps / self.n_cycles)
 
         if self.annealing:
-            param = 1 + self.last_epoch / self.n_epochs
+            param = 1 + self.last_epoch / self.n_steps
             epochs_per_cycle *= 1 + param
 
         cos_inner = math.pi * (self.last_epoch % epochs_per_cycle) / epochs_per_cycle
@@ -29,7 +29,7 @@ class TruncateCosineScheduler(_LRScheduler):
                 for base_lr in self.base_lrs]
 
 
-def cosine_lr_func_gen(n_epochs: int, n_cycles: int, lrate_max: float,
+def cosine_lr_func_gen(n_steps: int, n_cycles: int, lrate_max: float,
                        annealing: bool = True):
     """Generates a learning rate function of truncated cosine type,
        if annealing is True (default) as epochs progress
@@ -39,10 +39,10 @@ def cosine_lr_func_gen(n_epochs: int, n_cycles: int, lrate_max: float,
         """Function generated with the parameters retrieved from cosine_lr_func_gen"""
 
         param = 1
-        epochs_per_cycle = math.floor(n_epochs / n_cycles)
+        epochs_per_cycle = math.floor(n_steps / n_cycles)
 
         if annealing:
-            param = 1 + epoch / n_epochs
+            param = 1 + epoch / n_steps
             epochs_per_cycle *= 1 + param
 
         cos_inner = math.pi * (epoch % epochs_per_cycle) / epochs_per_cycle
