@@ -1,13 +1,16 @@
 from __future__ import print_function, division
-import argparse
+
 import os
+from argparse import ArgumentParser
 from glob import glob
 
 import torch
-import torch.nn as nn
-import torch.optim as optim
+from torch.optim import Adam
+from torch.nn import MSELoss
 from torch.utils.data import DataLoader
 from torch.utils.tensorboard import SummaryWriter
+
+from torch.optim.lr_scheduler import CosineAnnealingLR, ReduceLROnPlateau
 
 from model.cnn_geometric_model import CNNGeometric
 from model.light_cnn_geo_model import CNNGeometric as LightCNN
@@ -43,7 +46,7 @@ def parse_flags():
     """
 
     # Argument parsing
-    parser = argparse.ArgumentParser(description='CNNGeometric PyTorch implementation')
+    parser = ArgumentParser(description='CNNGeometric PyTorch implementation')
     # Paths
     parser.add_argument('--training_dataset', type=str, default='pascal',
                         help='dataset to use for training')
@@ -158,7 +161,7 @@ def main():
 
     if args.loss == 'mse':
         print('Using MSE loss...')
-        loss = nn.MSELoss()
+        loss = MSELoss()
 
     elif args.loss == 'sum':
         print('Using the sum of MSE and grid loss...')
@@ -229,23 +232,24 @@ def main():
                                 shuffle=True, num_workers=4)
 
     # Optimizer and eventual scheduler
-    optimizer = optim.Adam(model.FeatureRegression.parameters(), lr=args.lr)
+    optimizer = Adam(model.FeatureRegression.parameters(), lr=args.lr)
 
     if args.lr_scheduler:
 
         if args.scheduler_type == 'cosine':
             print('Using cosine learning rate scheduler')
-            scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer,
-                                                                   T_max=args.lr_max_iter,
-                                                                   eta_min=args.lr_min)
+            scheduler = CosineAnnealingLR(optimizer,
+                                          T_max=args.lr_max_iter,
+                                          eta_min=args.lr_min)
 
         elif args.scheduler_type == 'decay':
             print('Using decay learning rate scheduler')
-            scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, 'min')
+            scheduler = ReduceLROnPlateau(optimizer, 'min')
 
         else:
             print('Using truncated cosine with decay learning rate scheduler...')
-            scheduler = TruncateCosineScheduler(optimizer, len(dataloader),
+            scheduler = TruncateCosineScheduler(optimizer,
+                                                len(dataloader),
                                                 args.num_epochs - 1)
     else:
         scheduler = False
@@ -290,7 +294,7 @@ def main():
 
     best_val_loss = float("inf")
 
-    for epoch in range(1, args.num_epochs+1):
+    for epoch in range(1, args.num_epochs + 1):
 
         # we don't need the average epoch loss so we assign it to _
         _ = train(epoch, model, loss, optimizer,
