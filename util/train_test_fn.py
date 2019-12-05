@@ -110,7 +110,7 @@ def validate_model(model, loss_fn,
 
         # if possible log on TB an image_a, image_b couple with the relative predicted transform
         if coupled and tb_writer and batch_idx == 0:
-            log_images(tb_writer, batch, theta, epoch,
+            log_images(tb_writer, [batch, tnf_batch['theta_GT']], theta, epoch,
                        tag='Validation',
                        n_max=len(batch['image_a']))
 
@@ -129,8 +129,8 @@ def log_images(tb_writer, batch, tnf_matrices, counter, tag=None, n_max=1):
     Fn to log image batches
 
     :param tb_writer: Summary Writer
-    :param batch: Batch of samples
-    :param tnf_matrices: Batch of transformations to apply
+    :param batch: Batch of samples in this format [input_batch, ground_truth]
+    :param tnf_matrices: Output batch of transformations to apply
     :param counter: Epoch index
     :param tag: Default None, if a string is specified tags the log
      with it as a prefix
@@ -138,16 +138,22 @@ def log_images(tb_writer, batch, tnf_matrices, counter, tag=None, n_max=1):
     :return: None
     """
 
-    images = zip(batch['image_a'], batch['image_b'], batch['vertices_a'], tnf_matrices)
+    input_batch, gt_batch = batch[0], batch[1]
 
-    for idx, (img_a, img_b, vertices, aff_matrix) in enumerate(images):
+    images = zip(input_batch['image_a'], input_batch['image_b'],
+                 input_batch['vertices_a'],
+                 gt_batch, tnf_matrices)
+
+    for idx, (img_a, img_b, vertices, ground_truth, aff_matrix) in enumerate(images):
         if idx < n_max:
 
             denorm_a_img = normalize_image(img_a.unsqueeze(0),
                                            forward=False)
             denorm_b_img = normalize_image(img_b.unsqueeze(0),
                                            forward=False)
-            transform = aff_matrix.cpu().detach().reshape([2, 3]).numpy()
+
+            gt_tnf = ground_truth.cpu().detach().reshape([2, 3]).numpy()
+            predicted_tnf = aff_matrix.cpu().detach().reshape([2, 3]).numpy()
 
             # get vertices to warp
             vertices = np.array(vertices)
@@ -156,16 +162,23 @@ def log_images(tb_writer, batch, tnf_matrices, counter, tag=None, n_max=1):
                                      np.ones(shape=(len(vertices), 1))])
 
             # warp points through affine matrix
-            warped_pts = transform.dot(to_warp_pts.T).T
+            warped_pts = predicted_tnf.dot(to_warp_pts.T).T
+            gt_warped_pts = gt_tnf.dot(to_warp_pts.T).T
 
             # denormalize warped points
             out_img_y, out_img_x = denorm_b_img.shape[2:]
             src_img_y, src_img_x = denorm_a_img.shape[2:]
 
-            original_pts = np.array([[int(point[0] * src_img_x), int(point[1] * src_img_y)] for point in to_warp_pts],
+            original_pts = np.array([[int(point[0] * src_img_x),
+                                      int(point[1] * src_img_y)] for point in to_warp_pts],
                                     np.int32).reshape((-1, 1, 2))
-            to_draw_pts = np.array([[int(point[0] * out_img_x), int(point[1] * out_img_y)] for point in warped_pts],
+            to_draw_pts = np.array([[int(point[0] * out_img_x),
+                                     int(point[1] * out_img_y)] for point in warped_pts],
                                    np.int32).reshape((-1, 1, 2))
+
+            to_draw_gt_pts = np.array([[int(point[0] * out_img_x),
+                                        int(point[1] * out_img_y)] for point in gt_warped_pts],
+                                      np.int32).reshape((-1, 1, 2))
 
             drawn_a_img = np.moveaxis(denorm_a_img.squeeze().numpy(), 0, 2)
             drawn_b_img = np.moveaxis(denorm_b_img.squeeze().numpy(), 0, 2)
@@ -178,6 +191,10 @@ def log_images(tb_writer, batch, tnf_matrices, counter, tag=None, n_max=1):
             # draw warped points over template image
             cv2.polylines(drawn_b_img, [to_draw_pts],
                           True, (0, 0, 255), 7)
+            # draw ground truth points over template image of a different color
+            cv2.polylines(drawn_b_img, [to_draw_gt_pts],
+                          True, (255, 0), 7)
+            # draw original points over image a
             cv2.polylines(drawn_a_img, [original_pts],
                           True, (0, 0, 255), 7)
 
