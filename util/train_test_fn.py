@@ -125,7 +125,7 @@ def validate_model(model, loss_fn,
     return val_loss
 
 
-def log_images(tb_writer, batch, tnf_matrices, counter, tag=None, n_max=1):
+def log_images(tb_writer, batch, tnf_matrices, counter, tag=None, n_max=5):
     """
     Fn to log image batches
 
@@ -144,6 +144,8 @@ def log_images(tb_writer, batch, tnf_matrices, counter, tag=None, n_max=1):
     images = zip(input_batch['image_a'], input_batch['image_b'],
                  input_batch['vertices_a'],
                  gt_batch, tnf_matrices)
+
+    concat_img_list = []
 
     for idx, (img_a, img_b, vertices, ground_truth, aff_matrix) in enumerate(images):
         if idx < n_max:
@@ -204,20 +206,21 @@ def log_images(tb_writer, batch, tnf_matrices, counter, tag=None, n_max=1):
                           True, (0, 0, 255), 6)
 
             # concatenate A and drawn B
-            concat_img = cat([Tensor(drawn_a_img).double() / 255,
-                              Tensor(drawn_b_img).double() / 255], 1)
-
-            if not tag:
-                log_name = 'A warp on B'
-            elif isinstance(tag, str):
-                log_name = '{}\tA warp on B'.format(tag)
-            else:
-                raise ValueError("Unexpected type for 'tag', must be of type string.")
-
-            # log image
-            tb_writer.add_images(log_name,
-                                 concat_img.permute(2, 0, 1).unsqueeze(0),
-                                 counter)
+            concat_img_list.append(cat([Tensor(drawn_a_img).double() / 255,
+                                   Tensor(drawn_b_img).double() / 255],
+                                       1).permute(2, 0, 1).unsqueeze(0))
 
         else:
             break
+
+    if not tag:
+        log_name = 'A warp on B'
+    elif isinstance(tag, str):
+        log_name = '{}\tA warp on B'.format(tag)
+    else:
+        raise ValueError("Unexpected type for 'tag', must be of type string.")
+
+    # log image
+    tb_writer.add_images(log_name,
+                         cat(concat_img_list, 2),
+                         counter)
