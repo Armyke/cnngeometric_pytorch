@@ -86,6 +86,13 @@ def parse_flags():
                         help='weight decay constant')
     parser.add_argument('--seed', type=int, default=1,
                         help='Pseudo-RNG seed')
+    parser.add_argument('--normalization', type=str_to_bool,
+                        default=True,
+                        help='Whether perform normalization of image'
+                             'over mean and standard deviation.'
+                             'Should be used in case of RGB images'
+                             'and not on gray scale.'
+                             'Default True.')
     # Model parameters
     parser.add_argument('--geometric_model', type=str, default='affine',
                         help='geometric model to be regressed at output: affine or tps')
@@ -195,32 +202,45 @@ def main():
 
     # Initialize Dataset objects
     if args.coupled_dataset:
+
+        if args.normalization:
+            print("Using image normalization...")
+            pre_process = NormalizeImageDict(['image_a', 'image_b'])
+        else:
+            pre_process = None
+
         # Dataset  for train and val if dataset is already coupled
         dataset = CoupledDataset(geometric_model=args.geometric_model,
                                  csv_file=train_csv_path,
                                  training_image_path=args.training_image_path,
-                                 transform=NormalizeImageDict(['image_a', 'image_b']))
+                                 transform=pre_process)
 
         dataset_val = CoupledDataset(geometric_model=args.geometric_model,
                                      csv_file=val_csv_path,
                                      training_image_path=args.training_image_path,
-                                     transform=NormalizeImageDict(['image_a', 'image_b']))
+                                     transform=pre_process)
 
         # Set Tnf pair generation func
         pair_generation_tnf = CoupledPairTnf(use_cuda=use_cuda)
 
     else:
+        if args.normalization:
+            print("Using image normalization...")
+            pre_process = NormalizeImageDict(['image'])
+        else:
+            pre_process = None
+
         # Standard Dataset for train and val
         dataset = SynthDataset(geometric_model=args.geometric_model,
                                csv_file=train_csv_path,
                                training_image_path=args.training_image_path,
-                               transform=NormalizeImageDict(['image']),
+                               transform=pre_process,
                                random_sample=args.random_sample)
 
         dataset_val = SynthDataset(geometric_model=args.geometric_model,
                                    csv_file=val_csv_path,
                                    training_image_path=args.training_image_path,
-                                   transform=NormalizeImageDict(['image']),
+                                   transform=pre_process,
                                    random_sample=args.random_sample)
 
         # Set Tnf pair generation func

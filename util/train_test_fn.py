@@ -148,10 +148,14 @@ def log_images(tb_writer, batch, tnf_matrices, counter, tag=None, n_max=1):
     for idx, (img_a, img_b, vertices, ground_truth, aff_matrix) in enumerate(images):
         if idx < n_max:
 
-            denorm_a_img = normalize_image(img_a.unsqueeze(0),
-                                           forward=False)
-            denorm_b_img = normalize_image(img_b.unsqueeze(0),
-                                           forward=False)
+            if img_a.mean().item() > 5:
+                denorm_a_img = img_a.unsqueeze(0) / 255
+                denorm_b_img = img_b.unsqueeze(0) / 255
+            else:
+                denorm_a_img = normalize_image(img_a.unsqueeze(0),
+                                               forward=False)
+                denorm_b_img = normalize_image(img_b.unsqueeze(0),
+                                               forward=False)
 
             gt_tnf = ground_truth.cpu().detach().reshape([2, 3]).numpy()
             predicted_tnf = aff_matrix.cpu().detach().reshape([2, 3]).numpy()
