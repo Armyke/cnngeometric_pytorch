@@ -65,7 +65,8 @@ def train(epoch, model, loss_fn, optimizer,
             print('\tLoss: {:.6f}'.format(loss.data.item()))
             if tb_writer:
                 log_images(tb_writer,
-                           batch, theta,
+                           [batch, tnf_batch['theta_GT']],
+                           theta,
                            (epoch - 1) * len(dataloader) + batch_idx,
                            'Model Output')
 
@@ -188,15 +189,15 @@ def log_images(tb_writer, batch, tnf_matrices, counter, tag=None, n_max=1):
             drawn_b_img = np.ones(drawn_b_img.shape) * np.array(drawn_b_img * 255,
                                                                 dtype=np.uint8)
 
-            # draw warped points over template image
-            cv2.polylines(drawn_b_img, [to_draw_pts],
-                          True, (0, 0, 255), 7)
-            # draw ground truth points over template image of a different color
+            # draw ground truth points over template image (green)
             cv2.polylines(drawn_b_img, [to_draw_gt_pts],
-                          True, (255, 0), 7)
-            # draw original points over image a
+                          True, (0, 255, 0), 7)
+            # draw warped points over template image (blue)
+            cv2.polylines(drawn_b_img, [to_draw_pts],
+                          True, (0, 0, 255), 6)
+            # draw original points over image a (blue)
             cv2.polylines(drawn_a_img, [original_pts],
-                          True, (0, 0, 255), 7)
+                          True, (0, 0, 255), 6)
 
             # concatenate A and drawn B
             concat_img = cat([Tensor(drawn_a_img).double() / 255,
