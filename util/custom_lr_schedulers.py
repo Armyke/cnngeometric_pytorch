@@ -29,7 +29,8 @@ class TruncateCosineScheduler(_LRScheduler):
                 for base_lr in self.base_lrs]
 
 
-def cosine_lr_func_gen(n_steps: int, n_cycles: int, lrate_max: float,
+def cosine_lr_func_gen(n_steps: int, n_cycles: int,
+                       lrate_max: float, lr_min: float = 1e-7,
                        annealing: bool = True):
     """Generates a learning rate function of truncated cosine type,
        if annealing is True (default) as epochs progress
@@ -45,11 +46,11 @@ def cosine_lr_func_gen(n_steps: int, n_cycles: int, lrate_max: float,
             param = 1 + epoch / n_steps
             epochs_per_cycle *= 1 + param
 
-        cos_inner = math.pi * (epoch % epochs_per_cycle) / epochs_per_cycle
+        cos_inner = math.pi * ((2 * epoch) % epochs_per_cycle) / epochs_per_cycle
 
         new_lr = lrate_max/(2 * param) * (math.cos(cos_inner) + 1)
 
-        return new_lr
+        return new_lr + lr_min
 
     return cosine_learning_rate
 
@@ -65,12 +66,14 @@ if __name__ == '__main__':
     PARSER.add_argument('--steps', default=1000, type=int)
     ARGS = PARSER.parse_args()
 
-    LR_FUNC1 = cosine_lr_func_gen(10, 5, 0.5)
-    LR_FUNC2 = cosine_lr_func_gen(10, 5, 0.5, annealing=False)
+    LR_FUNC1 = cosine_lr_func_gen(10000, 4, 0.01, 1e-6)
+    LR_FUNC2 = cosine_lr_func_gen(10, 5, 0.5, 1e-5, annealing=False)
 
-    LR_EVOLUTION1 = [LR_FUNC1(i) for i in range(100)]
+    LR_EVOLUTION1 = [LR_FUNC1(i) for i in range(11448)]
     LR_EVOLUTION2 = [LR_FUNC2(i) for i in range(100)]
 
-    plt.plot([i for i in range(100)], LR_EVOLUTION1)
-    plt.plot([i for i in range(100)], LR_EVOLUTION2)
+    print(min(LR_EVOLUTION1))
+
+    plt.plot([i for i in range(11448)], LR_EVOLUTION1)
+    # plt.plot([i for i in range(100)], LR_EVOLUTION2)
     plt.show()
